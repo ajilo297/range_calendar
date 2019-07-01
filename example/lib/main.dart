@@ -11,6 +11,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        accentColor: Colors.redAccent,
       ),
       home: HomePage(),
     );
@@ -23,6 +24,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final GlobalKey<RangeCalendarState> _calendarKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,16 +34,22 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Center(
         child: RangeCalendar(
-          outOfMonthDateDecoration: ShapeDecoration(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(2),
-            ),
-            color: Colors.black,
-          ),
-          currentDateTime: DateTime(2019, 5, 31),
+          key: _calendarKey,
+          currentDateTime: DateTime(2019, 6, 30),
+          selectionStartDate: DateTime(2019, 6, 18),
+          selectionEndDate: DateTime(2019, 6, 22),
           showMonthControls: true,
+          highlightCurrentDate: true,
         ),
       ),
+      floatingActionButton: FloatingActionButton(onPressed: () {
+        if (_calendarKey.currentState.selectionType ==
+            SelectionType.START_DATE) {
+          _calendarKey.currentState.selectionType = SelectionType.END_DATE;
+        } else {
+          _calendarKey.currentState.selectionType = SelectionType.START_DATE;
+        }
+      }),
     );
   }
 }

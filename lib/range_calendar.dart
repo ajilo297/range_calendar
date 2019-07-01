@@ -16,6 +16,8 @@ class RangeCalendar extends StatefulWidget {
   final Decoration currentDateDecoration;
   final Decoration selectedDateDecoration;
   final Decoration outOfMonthDateDecoration;
+  final Decoration startDateDecoration;
+  final Decoration endDateDecoration;
 
   final bool highlightCurrentDate;
   final bool showMonthControls;
@@ -32,9 +34,11 @@ class RangeCalendar extends StatefulWidget {
     this.currentDateDecoration,
     this.selectedDateDecoration,
     this.outOfMonthDateDecoration,
+    this.startDateDecoration, this.endDateDecoration,
     this.highlightCurrentDate = true,
     this.showMonthControls = true,
-  });
+    Key key,
+  }) : super(key: key);
 
   @override
   RangeCalendarState createState() => RangeCalendarState();
@@ -87,18 +91,27 @@ class RangeCalendarState extends State<RangeCalendar> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          IconButton(
-            icon: Icon(Icons.navigate_before),
-            onPressed: previousMonth,
+          Expanded(
+            child: IconButton(
+              icon: Icon(Icons.navigate_before),
+              onPressed: previousMonth,
+            ),
           ),
-          Text(
-            '${monthList.elementAt(_viewDate.month - 1)} ${_viewDate.year}',
-            style: widget.monthControlTextStyle ??
-                Theme.of(context).textTheme.title,
+          Expanded(
+            child: Text(
+              '${monthList.elementAt(_viewDate.month - 1)} ${_viewDate.year}',
+              style: widget.monthControlTextStyle ??
+                  Theme.of(context).textTheme.title.copyWith(
+                        fontSize: 16,
+                      ),
+              textAlign: TextAlign.center,
+            ),
           ),
-          IconButton(
-            icon: Icon(Icons.navigate_next),
-            onPressed: nextMonth,
+          Expanded(
+            child: IconButton(
+              icon: Icon(Icons.navigate_next),
+              onPressed: nextMonth,
+            ),
           ),
         ],
       ),
@@ -112,7 +125,13 @@ class RangeCalendarState extends State<RangeCalendar> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[_weekdayTitleRowWidget, monthDateView],
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5.0),
+              child: _weekdayTitleRowWidget,
+            ),
+            monthDateView,
+          ],
         ),
       ),
     );
@@ -145,6 +164,8 @@ class RangeCalendarState extends State<RangeCalendar> {
       physics: NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       crossAxisCount: 7,
+      padding: EdgeInsets.symmetric(horizontal: 5),
+      primary: false,
       children: () {
         List<int> dayList = [];
         for (int i = 0; i < 42; i++) {
@@ -152,33 +173,55 @@ class RangeCalendarState extends State<RangeCalendar> {
         }
         return dayList.map(
           (dayIndex) {
-            return Container(
-              decoration: () {
-                bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
-                if (!isInCurrentMonth) {
-                  return widget.outOfMonthDateDecoration;
-                }
-                if (_isSameDay(
-                  widget.currentDateTime ?? DateTime.now(),
-                  DateTime(
-                    _viewDate.year,
-                    _viewDate.month,
-                    dayIndex - dayOffset,
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  onDateSelected(dayIndex);
+                },
+                child: AnimatedContainer(
+                  padding: EdgeInsets.all(8),
+                  duration: Duration(milliseconds: 400),
+                  decoration: () {
+                    if (_isInSelectedRange(dayIndex)) {
+                      return widget.selectedDateDecoration ??
+                          BoxDecoration(
+                            color: Theme.of(context).primaryColor,
+                          );
+                    }
+                  }(),
+                  child: AnimatedContainer(
+                    duration: Duration(milliseconds: 400),
+                    decoration: () {
+                      bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
+                      if (!isInCurrentMonth) {
+                        return widget.outOfMonthDateDecoration;
+                      }
+                      if (widget.highlightCurrentDate &&
+                          _isSameDay(
+                            widget.currentDateTime ?? DateTime.now(),
+                            DateTime(
+                              _viewDate.year,
+                              _viewDate.month,
+                              dayIndex - dayOffset,
+                            ),
+                          )) {
+                        return widget.currentDateDecoration ??
+                            ShapeDecoration(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
+                                side: BorderSide(
+                                  color: Theme.of(context).accentColor,
+                                  width: 2,
+                                ),
+                              ),
+                            );
+                      }
+                    }(),
+                    child: getDayTextWidget(dayIndex),
                   ),
-                )) {
-                  return widget.currentDateDecoration ??
-                      ShapeDecoration(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
-                          side: BorderSide(
-                            color: Theme.of(context).accentColor,
-                            width: 2,
-                          ),
-                        ),
-                      );
-                }
-              }(),
-              child: getDayTextWidget(dayIndex),
+                ),
+              ),
             );
           },
         ).toList();
@@ -186,8 +229,47 @@ class RangeCalendarState extends State<RangeCalendar> {
     );
   }
 
+  void onDateSelected(int dayIndex) {
+    DateTime selectionDate = _getDateFromDayIndex(dayIndex);
+    setState(() {
+      if (selectionType == SelectionType.START_DATE) startDate = selectionDate;
+      if (selectionType == SelectionType.END_DATE) endDate = selectionDate;
+    });
+  }
+
+  DateTime _getDateFromDayIndex(int dayIndex) {
+    int dateValue;
+    DateTime selectionDate = DateTime(
+      _viewDate.year,
+      _viewDate.month,
+      _viewDate.day,
+    );
+    if (dayIndex <= dayOffset) {
+      int numberOfDaysInPreviousMonth = getNumberOfDaysInMonth(
+          _viewDate.month > 1 ? _viewDate.month - 1 : 12, _viewDate.year);
+      dateValue = numberOfDaysInPreviousMonth - (dayOffset - dayIndex);
+      selectionDate =
+          DateTime(selectionDate.year, selectionDate.month - 1, dateValue);
+    } else if (dayIndex - dayOffset >
+        getNumberOfDaysInMonth(_viewDate.month, _viewDate.year)) {
+      dateValue = dayIndex -
+          (getNumberOfDaysInMonth(
+            _viewDate.month,
+            _viewDate.year,
+          ) +
+              dayOffset);
+      selectionDate =
+          DateTime(selectionDate.year, selectionDate.month + 1, dateValue);
+    } else {
+      dateValue = dayIndex - dayOffset;
+      selectionDate =
+          DateTime(selectionDate.year, selectionDate.month, dateValue);
+    }
+    return selectionDate;
+  }
+
   Widget getDayTextWidget(int dayIndex) {
-    bool isInCurrentMonth = false;
+    bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
     int dateValue;
     if (dayIndex <= dayOffset) {
       int numberOfDaysInPreviousMonth = getNumberOfDaysInMonth(
@@ -203,7 +285,6 @@ class RangeCalendarState extends State<RangeCalendar> {
               dayOffset);
     } else {
       dateValue = dayIndex - dayOffset;
-      isInCurrentMonth = true;
     }
 
     return Center(
@@ -216,17 +297,28 @@ class RangeCalendarState extends State<RangeCalendar> {
                 Theme.of(context)
                     .textTheme
                     .body1
-                    .copyWith(color: Color(0xffefefef)),
+                    .copyWith(color: Color(0xffeeeeee)),
       ),
     );
   }
 
-  bool _isInSelectedDate() {}
+  bool _isInSelectedRange(int dayIndex) {
+    int day = dayIndex - dayOffset;
+    DateTime testDate = DateTime(_viewDate.year, _viewDate.month, day);
+
+    if (startDate == null) return false;
+    if (endDate == null) return false;
+    if ((testDate.isAfter(startDate) || _isSameDay(testDate, startDate)) &&
+        (testDate.isBefore(endDate) || _isSameDay(testDate, endDate))) {
+      return true;
+    }
+    return false;
+  }
 
   bool _isDayIndexOutOfMonth(int dayIndex) {
-    if (dayIndex <= dayOffset) {
-      int numberOfDaysInPreviousMonth = getNumberOfDaysInMonth(
-          _viewDate.month > 1 ? _viewDate.month - 1 : 12, _viewDate.year);
+    if (dayIndex <= dayOffset ||
+        dayIndex - dayOffset >
+            getNumberOfDaysInMonth(_viewDate.month, _viewDate.year)) {
       return true;
     } else if (dayIndex - dayOffset >
         getNumberOfDaysInMonth(_viewDate.month, _viewDate.year)) {
