@@ -35,11 +35,9 @@ class _HomePageState extends State<HomePage> {
       body: Center(
         child: RangeCalendar(
           key: _calendarKey,
-          currentDateTime: DateTime(2019, 6, 30),
-          selectionStartDate: DateTime(2019, 6, 18),
-          selectionEndDate: DateTime(2019, 6, 22),
+          currentDateTime: DateTime.now(),
           showMonthControls: true,
-          highlightCurrentDate: true,
+          highlightCurrentDate: false,
         ),
       ),
       floatingActionButton: FloatingActionButton(onPressed: () {

@@ -34,7 +34,8 @@ class RangeCalendar extends StatefulWidget {
     this.currentDateDecoration,
     this.selectedDateDecoration,
     this.outOfMonthDateDecoration,
-    this.startDateDecoration, this.endDateDecoration,
+    this.startDateDecoration,
+    this.endDateDecoration,
     this.highlightCurrentDate = true,
     this.showMonthControls = true,
     Key key,
@@ -60,7 +61,8 @@ class RangeCalendarState extends State<RangeCalendar> {
     startDate = widget.selectionStartDate ?? DateTime.now();
     endDate = widget.selectionEndDate ?? DateTime.now();
 
-    assert(startDate.isBefore(endDate) || _isSameDay(startDate, endDate));
+    if (startDate != null || endDate != null)
+      assert(startDate.isBefore(endDate) || isSameDay(startDate, endDate));
   }
 
   @override
@@ -77,15 +79,27 @@ class RangeCalendarState extends State<RangeCalendar> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            if (widget.showMonthControls) monthControl,
-            monthView,
+            if (widget.showMonthControls) _monthControl,
+            _monthView,
           ],
         ),
       ),
     );
   }
 
-  Widget get monthControl {
+  void nextMonth() {
+    setState(() {
+      return _viewDate = DateTime(_viewDate.year, _viewDate.month + 1, 1);
+    });
+  }
+
+  void previousMonth() {
+    setState(() {
+      _viewDate = DateTime(_viewDate.year, _viewDate.month - 1, 1);
+    });
+  }
+
+  Widget get _monthControl {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -99,11 +113,9 @@ class RangeCalendarState extends State<RangeCalendar> {
           ),
           Expanded(
             child: Text(
-              '${monthList.elementAt(_viewDate.month - 1)} ${_viewDate.year}',
+              '${_monthList.elementAt(_viewDate.month - 1)} ${_viewDate.year}',
               style: widget.monthControlTextStyle ??
-                  Theme.of(context).textTheme.title.copyWith(
-                        fontSize: 16,
-                      ),
+                  Theme.of(context).textTheme.title.copyWith(fontSize: 16),
               textAlign: TextAlign.center,
             ),
           ),
@@ -118,28 +130,24 @@ class RangeCalendarState extends State<RangeCalendar> {
     );
   }
 
-  Widget get monthView {
-    return Center(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5.0),
-              child: _weekdayTitleRowWidget,
-            ),
-            monthDateView,
-          ],
+  Widget get _monthView {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5.0),
+          child: _weekdayTitleRowWidget,
         ),
-      ),
+        _monthDateView,
+      ],
     );
   }
 
   Widget get _weekdayTitleRowWidget {
     return Row(
-      children: weekdayList.map((weekDay) {
+      children: _weekdayList.map((weekDay) {
         return _getWeekdayTitleWidget(weekDay);
       }).toList(),
     );
@@ -159,13 +167,12 @@ class RangeCalendarState extends State<RangeCalendar> {
     );
   }
 
-  Widget get monthDateView {
+  Widget get _monthDateView {
     return GridView.count(
       physics: NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       crossAxisCount: 7,
       padding: EdgeInsets.symmetric(horizontal: 5),
-      primary: false,
       children: () {
         List<int> dayList = [];
         for (int i = 0; i < 42; i++) {
@@ -177,16 +184,38 @@ class RangeCalendarState extends State<RangeCalendar> {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
-                  onDateSelected(dayIndex);
+                  _onDateSelected(dayIndex);
                 },
                 child: AnimatedContainer(
                   padding: EdgeInsets.all(8),
                   duration: Duration(milliseconds: 400),
                   decoration: () {
+                    if (_getDateFromDayIndex(dayIndex) == startDate) {
+                      return widget.startDateDecoration ??
+                          ShapeDecoration(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.horizontal(
+                                left: Radius.circular(8),
+                              ),
+                            ),
+                            color: Theme.of(context).primaryColor.withAlpha(40),
+                          );
+                    }
+                    if (_getDateFromDayIndex(dayIndex) == endDate) {
+                      return widget.endDateDecoration ??
+                          ShapeDecoration(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.horizontal(
+                                right: Radius.circular(8),
+                              ),
+                            ),
+                            color: Theme.of(context).primaryColor.withAlpha(40),
+                          );
+                    }
                     if (_isInSelectedRange(dayIndex)) {
                       return widget.selectedDateDecoration ??
                           BoxDecoration(
-                            color: Theme.of(context).primaryColor,
+                            color: Theme.of(context).primaryColor.withAlpha(20),
                           );
                     }
                   }(),
@@ -198,12 +227,12 @@ class RangeCalendarState extends State<RangeCalendar> {
                         return widget.outOfMonthDateDecoration;
                       }
                       if (widget.highlightCurrentDate &&
-                          _isSameDay(
+                          isSameDay(
                             widget.currentDateTime ?? DateTime.now(),
                             DateTime(
                               _viewDate.year,
                               _viewDate.month,
-                              dayIndex - dayOffset,
+                              dayIndex - _dayOffset,
                             ),
                           )) {
                         return widget.currentDateDecoration ??
@@ -218,7 +247,7 @@ class RangeCalendarState extends State<RangeCalendar> {
                             );
                       }
                     }(),
-                    child: getDayTextWidget(dayIndex),
+                    child: _getDayTextWidget(dayIndex),
                   ),
                 ),
               ),
@@ -229,11 +258,17 @@ class RangeCalendarState extends State<RangeCalendar> {
     );
   }
 
-  void onDateSelected(int dayIndex) {
+  void _onDateSelected(int dayIndex) {
     DateTime selectionDate = _getDateFromDayIndex(dayIndex);
+    if (selectionType == SelectionType.START_DATE &&
+        selectionDate.isAfter(endDate)) return;
+
+    if (selectionType == SelectionType.END_DATE &&
+        selectionDate.isBefore(startDate)) return;
     setState(() {
-      if (selectionType == SelectionType.START_DATE) startDate = selectionDate;
-      if (selectionType == SelectionType.END_DATE) endDate = selectionDate;
+      if (selectionType == SelectionType.START_DATE)
+        startDate = selectionDate;
+      else if (selectionType == SelectionType.END_DATE) endDate = selectionDate;
     });
   }
 
@@ -244,52 +279,34 @@ class RangeCalendarState extends State<RangeCalendar> {
       _viewDate.month,
       _viewDate.day,
     );
-    if (dayIndex <= dayOffset) {
+    if (dayIndex <= _dayOffset) {
       int numberOfDaysInPreviousMonth = getNumberOfDaysInMonth(
           _viewDate.month > 1 ? _viewDate.month - 1 : 12, _viewDate.year);
-      dateValue = numberOfDaysInPreviousMonth - (dayOffset - dayIndex);
+      dateValue = numberOfDaysInPreviousMonth - (_dayOffset - dayIndex);
       selectionDate =
           DateTime(selectionDate.year, selectionDate.month - 1, dateValue);
-    } else if (dayIndex - dayOffset >
+    } else if (dayIndex - _dayOffset >
         getNumberOfDaysInMonth(_viewDate.month, _viewDate.year)) {
       dateValue = dayIndex -
-          (getNumberOfDaysInMonth(
-            _viewDate.month,
-            _viewDate.year,
-          ) +
-              dayOffset);
+          (getNumberOfDaysInMonth(_viewDate.month, _viewDate.year) +
+              _dayOffset);
       selectionDate =
           DateTime(selectionDate.year, selectionDate.month + 1, dateValue);
     } else {
-      dateValue = dayIndex - dayOffset;
+      dateValue = dayIndex - _dayOffset;
       selectionDate =
           DateTime(selectionDate.year, selectionDate.month, dateValue);
     }
     return selectionDate;
   }
 
-  Widget getDayTextWidget(int dayIndex) {
+  Widget _getDayTextWidget(int dayIndex) {
     bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
-    int dateValue;
-    if (dayIndex <= dayOffset) {
-      int numberOfDaysInPreviousMonth = getNumberOfDaysInMonth(
-          _viewDate.month > 1 ? _viewDate.month - 1 : 12, _viewDate.year);
-      dateValue = numberOfDaysInPreviousMonth - (dayOffset - dayIndex);
-    } else if (dayIndex - dayOffset >
-        getNumberOfDaysInMonth(_viewDate.month, _viewDate.year)) {
-      dateValue = dayIndex -
-          (getNumberOfDaysInMonth(
-                _viewDate.month,
-                _viewDate.year,
-              ) +
-              dayOffset);
-    } else {
-      dateValue = dayIndex - dayOffset;
-    }
+    DateTime dateTime = _getDateFromDayIndex(dayIndex);
 
     return Center(
       child: Text(
-        dateValue.toString(),
+        dateTime.day.toString(),
         style: isInCurrentMonth
             ? widget.inMonthDateTextStyle ??
                 Theme.of(context).textTheme.body1.copyWith(color: Colors.black)
@@ -303,48 +320,58 @@ class RangeCalendarState extends State<RangeCalendar> {
   }
 
   bool _isInSelectedRange(int dayIndex) {
-    int day = dayIndex - dayOffset;
-    DateTime testDate = DateTime(_viewDate.year, _viewDate.month, day);
+    DateTime testDate = _getDateFromDayIndex(dayIndex);
 
     if (startDate == null) return false;
     if (endDate == null) return false;
-    if ((testDate.isAfter(startDate) || _isSameDay(testDate, startDate)) &&
-        (testDate.isBefore(endDate) || _isSameDay(testDate, endDate))) {
-      return true;
-    }
-    return false;
+
+    return isDateInRange(testDate, startDate, endDate);
   }
 
   bool _isDayIndexOutOfMonth(int dayIndex) {
-    if (dayIndex <= dayOffset ||
-        dayIndex - dayOffset >
+    if (dayIndex <= _dayOffset ||
+        dayIndex - _dayOffset >
             getNumberOfDaysInMonth(_viewDate.month, _viewDate.year)) {
       return true;
-    } else if (dayIndex - dayOffset >
+    } else if (dayIndex - _dayOffset >
         getNumberOfDaysInMonth(_viewDate.month, _viewDate.year)) {
       return true;
     }
     return false;
   }
 
-  int get dayOffset {
+  int get _dayOffset {
     int offset = DateTime(_viewDate.year, _viewDate.month, 1).weekday;
     offset = offset == 7 ? 0 : offset;
     return offset;
   }
 
-  void nextMonth() {
-    setState(() {
-      return _viewDate = DateTime(_viewDate.year, _viewDate.month + 1, 1);
-    });
-  }
+  static List<String> get _monthList => [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
 
-  void previousMonth() {
-    setState(() {
-      _viewDate = DateTime(_viewDate.year, _viewDate.month - 1, 1);
-    });
-  }
+  static List<String> get _weekdayList => [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednessday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ];
 
+  @visibleForTesting
   static int getNumberOfDaysInMonth(int month, int year) {
     int numDays = 28;
     switch (month) {
@@ -352,7 +379,7 @@ class RangeCalendarState extends State<RangeCalendar> {
         numDays = 31;
         break;
       case 2:
-        if (_isLeapYear(year)) {
+        if (isLeapYear(year)) {
           numDays = 29;
         } else {
           numDays = 28;
@@ -394,37 +421,23 @@ class RangeCalendarState extends State<RangeCalendar> {
     return numDays;
   }
 
-  static List<String> get monthList => [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
-
-  static List<String> get weekdayList => [
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednessday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-      ];
-
-  static bool _isLeapYear(int year) {
+  @visibleForTesting
+  static bool isLeapYear(int year) {
     return (year % 4 == 0) && (year % 100 != 0) || (year % 400 == 0);
   }
 
-  static bool _isSameDay(DateTime d1, DateTime d2) {
+  @visibleForTesting
+  static bool isSameDay(DateTime d1, DateTime d2) {
     return (d1.year == d2.year && d1.month == d2.month && d1.day == d2.day);
+  }
+
+  @visibleForTesting
+  static bool isDateInRange(DateTime testDate, DateTime d1, DateTime d2) {
+    if ((testDate.isAfter(d1) || isSameDay(testDate, d1)) &&
+        (testDate.isBefore(d2) || isSameDay(testDate, d2))) {
+      return true;
+    }
+    return false;
   }
 }
 
