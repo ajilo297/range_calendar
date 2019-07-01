@@ -40,14 +40,25 @@ class _HomePageState extends State<HomePage> {
           highlightCurrentDate: false,
         ),
       ),
-      floatingActionButton: FloatingActionButton(onPressed: () {
-        if (_calendarKey.currentState.selectionType ==
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          setState((){
+            if (_calendarKey.currentState.selectionType ==
             SelectionType.START_DATE) {
-          _calendarKey.currentState.selectionType = SelectionType.END_DATE;
-        } else {
-          _calendarKey.currentState.selectionType = SelectionType.START_DATE;
-        }
-      }),
+            _calendarKey.currentState.selectionType = SelectionType.END_DATE;
+          } else {
+            _calendarKey.currentState.selectionType = SelectionType.START_DATE;
+          }
+          });
+        },
+        child: (){
+          if (_calendarKey.currentState?.selectionType ==
+            SelectionType.START_DATE)
+            return Icon(Icons.ac_unit);
+          else 
+            return Icon(Icons.access_time);
+        }(),
+      ),
     );
   }
 }

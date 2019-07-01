@@ -53,6 +53,14 @@ class RangeCalendarState extends State<RangeCalendar> {
 
   SelectionType selectionType = SelectionType.START_DATE;
 
+  double width;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    width = MediaQuery.of(context).size.width;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -63,11 +71,6 @@ class RangeCalendarState extends State<RangeCalendar> {
 
     if (startDate != null || endDate != null)
       assert(startDate.isBefore(endDate) || isSameDay(startDate, endDate));
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
   }
 
   @override
@@ -136,10 +139,7 @@ class RangeCalendarState extends State<RangeCalendar> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5.0),
-          child: _weekdayTitleRowWidget,
-        ),
+        _weekdayTitleRowWidget,
         _monthDateView,
       ],
     );
@@ -160,7 +160,7 @@ class RangeCalendarState extends State<RangeCalendar> {
           child: Text(
             weekday.substring(0, 3),
             style:
-                widget.weekdayTextStyle ?? Theme.of(context).textTheme.subtitle,
+              widget.weekdayTextStyle ?? Theme.of(context).textTheme.subtitle,
           ),
         ),
       ),
@@ -168,94 +168,116 @@ class RangeCalendarState extends State<RangeCalendar> {
   }
 
   Widget get _monthDateView {
-    return GridView.count(
-      physics: NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      crossAxisCount: 7,
-      padding: EdgeInsets.symmetric(horizontal: 5),
-      children: () {
-        List<int> dayList = [];
-        for (int i = 0; i < 42; i++) {
-          dayList.add(i + 1);
-        }
-        return dayList.map(
-          (dayIndex) {
-            return Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  _onDateSelected(dayIndex);
-                },
-                child: AnimatedContainer(
-                  padding: EdgeInsets.all(8),
-                  duration: Duration(milliseconds: 400),
+    List<int> dayList = [];
+    for (int i = 0; i < 42; i++) {
+      dayList.add(i + 1);
+    }
+    return Table(
+      defaultColumnWidth: FixedColumnWidth(width/7),
+      border: TableBorder.all(color: Colors.transparent),
+      children: _weekDateView(dayList),
+    );
+  }
+
+  List<TableRow> _weekDateView(List<int> dayList) {
+    List<TableRow> rowList = [];
+    List<TableCell> cellList = [];
+    cellList = dayList.map((dayIndex){
+        return TableCell(
+          child: Material(
+            child: InkWell(
+              onTap: () {
+                _onDateSelected(dayIndex);
+              },
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Container(
+                  padding: EdgeInsets.all(10),
+                  // duration: Duration(milliseconds: 400),
                   decoration: () {
+                    // setState(() {
+                      if (_getDateFromDayIndex(dayIndex) == startDate && _getDateFromDayIndex(dayIndex) == endDate) {
+                      return widget.startDateDecoration ??
+                        ShapeDecoration(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                          ),
+                          color: Theme.of(context).primaryColor.withAlpha(40),
+                      );
+                    }
                     if (_getDateFromDayIndex(dayIndex) == startDate) {
                       return widget.startDateDecoration ??
-                          ShapeDecoration(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.horizontal(
-                                left: Radius.circular(8),
-                              ),
+                        ShapeDecoration(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.horizontal(
+                              left: Radius.circular(8),
                             ),
-                            color: Theme.of(context).primaryColor.withAlpha(40),
-                          );
+                          ),
+                          color: Theme.of(context).primaryColor.withAlpha(40),
+                      );
                     }
                     if (_getDateFromDayIndex(dayIndex) == endDate) {
                       return widget.endDateDecoration ??
-                          ShapeDecoration(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.horizontal(
-                                right: Radius.circular(8),
-                              ),
-                            ),
-                            color: Theme.of(context).primaryColor.withAlpha(40),
-                          );
+                        ShapeDecoration(
+                          shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.horizontal(
+                            right: Radius.circular(8),
+                          ),
+                        ),
+                        color: Theme.of(context).primaryColor.withAlpha(40),
+                      );
                     }
                     if (_isInSelectedRange(dayIndex)) {
                       return widget.selectedDateDecoration ??
-                          BoxDecoration(
-                            color: Theme.of(context).primaryColor.withAlpha(20),
-                          );
+                        BoxDecoration(
+                          color: Theme.of(context).primaryColor.withAlpha(20),
+                      );
                     }
-                  }(),
-                  child: AnimatedContainer(
-                    duration: Duration(milliseconds: 400),
-                    decoration: () {
-                      bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
-                      if (!isInCurrentMonth) {
-                        return widget.outOfMonthDateDecoration;
-                      }
-                      if (widget.highlightCurrentDate &&
-                          isSameDay(
-                            widget.currentDateTime ?? DateTime.now(),
-                            DateTime(
-                              _viewDate.year,
-                              _viewDate.month,
-                              dayIndex - _dayOffset,
+                  // });
+                }(),
+                child: Container(
+                  padding: EdgeInsets.all(10.0),
+                  // duration: Duration(milliseconds: 400),
+                  decoration: () {
+                    bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
+                    if (!isInCurrentMonth) {
+                      return widget.outOfMonthDateDecoration;
+                    }
+                    if (widget.highlightCurrentDate &&
+                      isSameDay(
+                        widget.currentDateTime ?? DateTime.now(),
+                        DateTime(
+                          _viewDate.year,
+                          _viewDate.month,
+                            dayIndex - _dayOffset,
+                        ),
+                    )) {
+                      return widget.currentDateDecoration ??
+                        ShapeDecoration(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5),
+                            side: BorderSide(
+                              color: Theme.of(context).accentColor,
+                              width: 2,
                             ),
-                          )) {
-                        return widget.currentDateDecoration ??
-                            ShapeDecoration(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5),
-                                side: BorderSide(
-                                  color: Theme.of(context).accentColor,
-                                  width: 2,
-                                ),
-                              ),
-                            );
+                          ),
+                        );
                       }
-                    }(),
-                    child: _getDayTextWidget(dayIndex),
-                  ),
+                  }(),
+                  child: _getDayTextWidget(dayIndex),
                 ),
-              ),
-            );
-          },
-        ).toList();
-      }(),
-    );
+              ), 
+            ),
+          ),
+        ),
+      );
+    }).toList();
+    
+    rowList = List.generate(6, (index){
+      int i = index * 7;
+      return TableRow(children: cellList.sublist(i,i+7));
+    });
+    return rowList;
   }
 
   void _onDateSelected(int dayIndex) {
