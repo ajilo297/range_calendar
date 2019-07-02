@@ -1,6 +1,18 @@
 library range_calendar;
 
 import 'package:flutter/material.dart';
+import 'package:animator/animator.dart';
+import 'package:states_rebuilder/states_rebuilder.dart';
+
+class CalBlock extends StatesRebuilder {
+  rebuild() {
+    print('Rebuild');
+    rebuildStates(["calwidget"]);
+    print('Rebuild States');
+  }
+}
+
+final calBlock = CalBlock();
 
 class RangeCalendar extends StatefulWidget {
   final DateTime currentDateTime;
@@ -188,85 +200,91 @@ class RangeCalendarState extends State<RangeCalendar> {
             child: InkWell(
               onTap: () {
                 _onDateSelected(dayIndex);
+                calBlock.rebuild();
               },
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Container(
-                  padding: EdgeInsets.all(10),
-                  // duration: Duration(milliseconds: 400),
-                  decoration: () {
-                    // setState(() {
-                      if (_getDateFromDayIndex(dayIndex) == startDate && _getDateFromDayIndex(dayIndex) == endDate) {
-                      return widget.startDateDecoration ??
-                        ShapeDecoration(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                          ),
-                          color: Theme.of(context).primaryColor.withAlpha(40),
-                      );
-                    }
-                    if (_getDateFromDayIndex(dayIndex) == startDate) {
-                      return widget.startDateDecoration ??
-                        ShapeDecoration(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.horizontal(
-                              left: Radius.circular(8),
-                            ),
-                          ),
-                          color: Theme.of(context).primaryColor.withAlpha(40),
-                      );
-                    }
-                    if (_getDateFromDayIndex(dayIndex) == endDate) {
-                      return widget.endDateDecoration ??
-                        ShapeDecoration(
-                          shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.horizontal(
-                            right: Radius.circular(8),
-                          ),
-                        ),
-                        color: Theme.of(context).primaryColor.withAlpha(40),
-                      );
-                    }
-                    if (_isInSelectedRange(dayIndex)) {
-                      return widget.selectedDateDecoration ??
-                        BoxDecoration(
-                          color: Theme.of(context).primaryColor.withAlpha(20),
-                      );
-                    }
-                  // });
-                }(),
-                child: Container(
-                  padding: EdgeInsets.all(10.0),
-                  // duration: Duration(milliseconds: 400),
-                  decoration: () {
-                    bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
-                    if (!isInCurrentMonth) {
-                      return widget.outOfMonthDateDecoration;
-                    }
-                    if (widget.highlightCurrentDate &&
-                      isSameDay(
-                        widget.currentDateTime ?? DateTime.now(),
-                        DateTime(
-                          _viewDate.year,
-                          _viewDate.month,
-                            dayIndex - _dayOffset,
-                        ),
-                    )) {
-                      return widget.currentDateDecoration ??
-                        ShapeDecoration(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                            side: BorderSide(
-                              color: Theme.of(context).accentColor,
-                              width: 2,
-                            ),
-                          ),
-                        );
-                      }
-                  }(),
-                  child: _getDayTextWidget(dayIndex),
-                ),
-              ), 
+                child: StateBuilder(
+                  tag: "calwidget",
+                  blocs: [calBlock],
+                  builder: (_,tag) => Animator(
+                      tween: ColorTween(end: Theme.of(context).primaryColor.withAlpha(20)),
+                      curve: Curves.easeIn,
+                      cycles: 1,
+                      duration: Duration(milliseconds: 400),
+                      builder: (anim) => Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: () {
+                          if (_getDateFromDayIndex(dayIndex) == startDate && _getDateFromDayIndex(dayIndex) == endDate) {
+                          return widget.startDateDecoration ??
+                            ShapeDecoration(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                              ),
+                              color: Theme.of(context).primaryColor.withAlpha(40),
+                            );
+                          }
+                          if (_getDateFromDayIndex(dayIndex) == startDate) {
+                            return widget.startDateDecoration ??
+                              ShapeDecoration(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.horizontal(
+                                    left: Radius.circular(8),
+                                  ),
+                                ),
+                                color: Theme.of(context).primaryColor.withAlpha(40),
+                              );
+                            }
+                          if (_getDateFromDayIndex(dayIndex) == endDate) {
+                            return widget.endDateDecoration ??
+                              ShapeDecoration(
+                                shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.horizontal(
+                                  right: Radius.circular(8),
+                                ),
+                              ),
+                              color: Theme.of(context).primaryColor.withAlpha(40),
+                            );
+                          }
+                          if (_isInSelectedRange(dayIndex)) {
+                            return widget.selectedDateDecoration ??
+                              BoxDecoration(
+                                color: anim.value,
+                            );
+                          }
+                        }(),
+                          child: Container(
+                            padding: EdgeInsets.all(10.0),
+                            decoration: () {
+                              bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
+                              if (!isInCurrentMonth) {
+                                return widget.outOfMonthDateDecoration;
+                              }
+                              if (widget.highlightCurrentDate && isSameDay(
+                                widget.currentDateTime ?? DateTime.now(),
+                                DateTime(
+                                  _viewDate.year,
+                                  _viewDate.month,
+                                  dayIndex - _dayOffset,
+                                ),
+                              )) {
+                                return widget.currentDateDecoration ??
+                                  ShapeDecoration(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(5),
+                                      side: BorderSide(
+                                        color: Theme.of(context).accentColor,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  );
+                              }
+                            }(),
+                        child: _getDayTextWidget(dayIndex),
+                    ),
+                  ),
+              ),
+                ), 
             ),
           ),
         ),
