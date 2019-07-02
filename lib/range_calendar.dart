@@ -6,9 +6,7 @@ import 'package:states_rebuilder/states_rebuilder.dart';
 
 class CalBlock extends StatesRebuilder {
   rebuild() {
-    print('Rebuild');
     rebuildStates(["calwidget"]);
-    print('Rebuild States');
   }
 }
 
@@ -26,10 +24,15 @@ class RangeCalendar extends StatefulWidget {
 
   final Decoration dateDecoration;
   final Decoration currentDateDecoration;
-  final Decoration selectedDateDecoration;
   final Decoration outOfMonthDateDecoration;
   final Decoration startDateDecoration;
   final Decoration endDateDecoration;
+
+  final Curve animationCurve;
+  
+  final Duration animationDuration;
+
+  final Color selectedDateColour;
 
   final bool highlightCurrentDate;
   final bool showMonthControls;
@@ -44,10 +47,12 @@ class RangeCalendar extends StatefulWidget {
     this.monthControlTextStyle,
     this.dateDecoration,
     this.currentDateDecoration,
-    this.selectedDateDecoration,
     this.outOfMonthDateDecoration,
     this.startDateDecoration,
     this.endDateDecoration,
+    this.animationCurve,
+    this.animationDuration,
+    this.selectedDateColour,
     this.highlightCurrentDate = true,
     this.showMonthControls = true,
     Key key,
@@ -208,10 +213,10 @@ class RangeCalendarState extends State<RangeCalendar> {
                   tag: "calwidget",
                   blocs: [calBlock],
                   builder: (_,tag) => Animator(
-                      tween: ColorTween(end: Theme.of(context).primaryColor.withAlpha(20)),
-                      curve: Curves.easeIn,
+                      tween: ColorTween(end: widget.selectedDateColour ?? Theme.of(context).primaryColor.withAlpha(20)),
+                      curve: widget.animationCurve ?? Curves.easeIn,
                       cycles: 1,
-                      duration: Duration(milliseconds: 400),
+                      duration: widget.animationDuration ?? Duration(milliseconds: 800),
                       builder: (anim) => Container(
                         padding: EdgeInsets.all(10),
                         decoration: () {
@@ -246,10 +251,13 @@ class RangeCalendarState extends State<RangeCalendar> {
                               color: Theme.of(context).primaryColor.withAlpha(40),
                             );
                           }
+                          if (isSameDay(startDate,_getDateFromDayIndex(dayIndex)) || isSameDay(endDate,_getDateFromDayIndex(dayIndex)))
+                            return BoxDecoration(
+                              color: Colors.transparent,
+                            );
                           if (_isInSelectedRange(dayIndex)) {
-                            return widget.selectedDateDecoration ??
-                              BoxDecoration(
-                                color: anim.value,
+                            return BoxDecoration(
+                              color: anim.value,
                             );
                           }
                         }(),
@@ -283,8 +291,8 @@ class RangeCalendarState extends State<RangeCalendar> {
                         child: _getDayTextWidget(dayIndex),
                     ),
                   ),
-              ),
-                ), 
+                ),
+              ), 
             ),
           ),
         ),
