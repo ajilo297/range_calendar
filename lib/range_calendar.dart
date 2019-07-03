@@ -238,19 +238,16 @@ class RangeCalendarState extends State<RangeCalendar> {
       builder: (animation) => Container(
             margin: widget.margin,
             decoration: () {
-              if (_getDateFromDayIndex(dayIndex) == startDate &&
-                  _getDateFromDayIndex(dayIndex) == endDate) {
-                return widget.startDateDecoration ?? _startEndDecoration;
-              }
+              if (isSameDay(startDate, _getDateFromDayIndex(dayIndex)) &&
+                  isSameDay(endDate, _getDateFromDayIndex(dayIndex)))
+                return widget.startDateDecoration ?? _defaultStartEndDecoration;
               if (_getDateFromDayIndex(dayIndex) == startDate) {
                 return widget.startDateDecoration ?? _defaultStartDecoration;
               }
               if (_getDateFromDayIndex(dayIndex) == endDate) {
                 return widget.endDateDecoration ?? _defaultEndDecoration;
               }
-              if (isSameDay(startDate, _getDateFromDayIndex(dayIndex)) ||
-                  isSameDay(endDate, _getDateFromDayIndex(dayIndex)))
-                return widget.startDateDecoration ?? _startEndDecoration;
+
               if (_isInSelectedRange(dayIndex)) {
                 return BoxDecoration(color: animation.value);
               }
@@ -289,7 +286,7 @@ class RangeCalendarState extends State<RangeCalendar> {
     );
   }
 
-  ShapeDecoration get _startEndDecoration => ShapeDecoration(
+  ShapeDecoration get _defaultStartEndDecoration => ShapeDecoration(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(8.0)),
         ),

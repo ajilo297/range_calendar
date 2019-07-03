@@ -23,8 +23,20 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   final GlobalKey<RangeCalendarState> _calendarKey = GlobalKey();
+  AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(
+        vsync: this,
+        lowerBound: 0,
+        upperBound: 1,
+        duration: Duration(milliseconds: 300));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,27 +50,26 @@ class _HomePageState extends State<HomePage> {
           currentDateTime: DateTime.now(),
           showMonthControls: true,
           highlightCurrentDate: true,
-          margin: EdgeInsets.symmetric(vertical: 5),
+          outMonthDateTextStyle: TextStyle(color: Colors.grey),
+          margin: EdgeInsets.symmetric(vertical: 2),
+          selectedDateColor: Colors.red.withAlpha(60),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          setState((){
-            if (_calendarKey.currentState.selectionType ==
-            SelectionType.START_DATE) {
+          if (_calendarKey.currentState.selectionType ==
+              SelectionType.START_DATE) {
+            controller.forward(from: 0);
             _calendarKey.currentState.selectionType = SelectionType.END_DATE;
           } else {
             _calendarKey.currentState.selectionType = SelectionType.START_DATE;
+            controller.reverse(from: 1);
           }
-          });
         },
-        child: (){
-          if (_calendarKey.currentState?.selectionType ==
-            SelectionType.START_DATE)
-            return Icon(Icons.ac_unit);
-          else 
-            return Icon(Icons.access_time);
-        }(),
+        child: AnimatedIcon(
+          icon: AnimatedIcons.ellipsis_search,
+          progress: controller.view,
+        ),
       ),
     );
   }
