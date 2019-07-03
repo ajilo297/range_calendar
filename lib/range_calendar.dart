@@ -4,14 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:animator/animator.dart';
 import 'package:states_rebuilder/states_rebuilder.dart';
 
-class CalBlock extends StatesRebuilder {
-  rebuild() {
-    rebuildStates(["calwidget"]);
-  }
-}
-
-final calBlock = CalBlock();
-
 class RangeCalendar extends StatefulWidget {
   final DateTime currentDateTime;
   final DateTime selectionStartDate;
@@ -29,13 +21,15 @@ class RangeCalendar extends StatefulWidget {
   final Decoration endDateDecoration;
 
   final Curve animationCurve;
-  
   final Duration animationDuration;
 
-  final Color selectedDateColour;
+  final Color selectedDateColor;
 
   final bool highlightCurrentDate;
   final bool showMonthControls;
+
+  final EdgeInsets margin;
+  final EdgeInsets padding;
 
   RangeCalendar({
     this.currentDateTime,
@@ -52,9 +46,11 @@ class RangeCalendar extends StatefulWidget {
     this.endDateDecoration,
     this.animationCurve,
     this.animationDuration,
-    this.selectedDateColour,
+    this.selectedDateColor,
     this.highlightCurrentDate = true,
     this.showMonthControls = true,
+    this.margin = const EdgeInsets.all(8),
+    this.padding = const EdgeInsets.all(4),
     Key key,
   }) : super(key: key);
 
@@ -69,13 +65,14 @@ class RangeCalendarState extends State<RangeCalendar> {
   DateTime endDate;
 
   SelectionType selectionType = SelectionType.START_DATE;
+  double _width;
 
-  double width;
+  final _CalendarStateBuilder _calendarStateBuilder = _CalendarStateBuilder();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    width = MediaQuery.of(context).size.width;
+    _width = MediaQuery.of(context).size.width;
   }
 
   @override
@@ -177,7 +174,7 @@ class RangeCalendarState extends State<RangeCalendar> {
           child: Text(
             weekday.substring(0, 3),
             style:
-              widget.weekdayTextStyle ?? Theme.of(context).textTheme.subtitle,
+                widget.weekdayTextStyle ?? Theme.of(context).textTheme.subtitle,
           ),
         ),
       ),
@@ -190,7 +187,7 @@ class RangeCalendarState extends State<RangeCalendar> {
       dayList.add(i + 1);
     }
     return Table(
-      defaultColumnWidth: FixedColumnWidth(width/7),
+      defaultColumnWidth: FixedColumnWidth(_width / 7),
       border: TableBorder.all(color: Colors.transparent),
       children: _weekDateView(dayList),
     );
@@ -199,112 +196,119 @@ class RangeCalendarState extends State<RangeCalendar> {
   List<TableRow> _weekDateView(List<int> dayList) {
     List<TableRow> rowList = [];
     List<TableCell> cellList = [];
-    cellList = dayList.map((dayIndex){
-        return TableCell(
-          child: Material(
-            child: InkWell(
-              onTap: () {
-                _onDateSelected(dayIndex);
-                calBlock.rebuild();
-              },
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: StateBuilder(
-                  tag: "calwidget",
-                  blocs: [calBlock],
-                  builder: (_,tag) => Animator(
-                      tween: ColorTween(end: widget.selectedDateColour ?? Theme.of(context).primaryColor.withAlpha(20)),
-                      curve: widget.animationCurve ?? Curves.easeIn,
-                      cycles: 1,
-                      duration: widget.animationDuration ?? Duration(milliseconds: 800),
-                      builder: (anim) => Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: () {
-                          if (_getDateFromDayIndex(dayIndex) == startDate && _getDateFromDayIndex(dayIndex) == endDate) {
-                          return widget.startDateDecoration ??
-                            ShapeDecoration(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                              ),
-                              color: Theme.of(context).primaryColor.withAlpha(40),
-                            );
-                          }
-                          if (_getDateFromDayIndex(dayIndex) == startDate) {
-                            return widget.startDateDecoration ??
-                              ShapeDecoration(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.horizontal(
-                                    left: Radius.circular(8),
-                                  ),
-                                ),
-                                color: Theme.of(context).primaryColor.withAlpha(40),
-                              );
-                            }
-                          if (_getDateFromDayIndex(dayIndex) == endDate) {
-                            return widget.endDateDecoration ??
-                              ShapeDecoration(
-                                shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.horizontal(
-                                  right: Radius.circular(8),
-                                ),
-                              ),
-                              color: Theme.of(context).primaryColor.withAlpha(40),
-                            );
-                          }
-                          if (isSameDay(startDate,_getDateFromDayIndex(dayIndex)) || isSameDay(endDate,_getDateFromDayIndex(dayIndex)))
-                            return BoxDecoration(
-                              color: Colors.transparent,
-                            );
-                          if (_isInSelectedRange(dayIndex)) {
-                            return BoxDecoration(
-                              color: anim.value,
-                            );
-                          }
-                        }(),
-                          child: Container(
-                            padding: EdgeInsets.all(10.0),
-                            decoration: () {
-                              bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
-                              if (!isInCurrentMonth) {
-                                return widget.outOfMonthDateDecoration;
-                              }
-                              if (widget.highlightCurrentDate && isSameDay(
-                                widget.currentDateTime ?? DateTime.now(),
-                                DateTime(
-                                  _viewDate.year,
-                                  _viewDate.month,
-                                  dayIndex - _dayOffset,
-                                ),
-                              )) {
-                                return widget.currentDateDecoration ??
-                                  ShapeDecoration(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(5),
-                                      side: BorderSide(
-                                        color: Theme.of(context).accentColor,
-                                        width: 2,
-                                      ),
-                                    ),
-                                  );
-                              }
-                            }(),
-                        child: _getDayTextWidget(dayIndex),
-                    ),
-                  ),
-                ),
-              ), 
+    cellList = dayList.map((dayIndex) {
+      return TableCell(
+        child: Material(
+          child: InkWell(
+            onTap: () {
+              _onDateSelected(dayIndex);
+              _calendarStateBuilder.rebuild();
+            },
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: StateBuilder(
+                tag: "$_CALENDAR_WIDGET_TAG",
+                blocs: [
+                  _calendarStateBuilder,
+                ],
+                builder: (context, tag) =>
+                    _animatedBuilder(context, tag, dayIndex),
+              ),
             ),
           ),
         ),
       );
     }).toList();
-    
-    rowList = List.generate(6, (index){
+
+    rowList = List.generate(6, (index) {
       int i = index * 7;
-      return TableRow(children: cellList.sublist(i,i+7));
+      return TableRow(children: cellList.sublist(i, i + 7));
     });
     return rowList;
   }
+
+  Widget _animatedBuilder(BuildContext context, String tag, int dayIndex) {
+    return Animator(
+      tween: ColorTween(
+          end: widget.selectedDateColor ??
+              Theme.of(context).primaryColor.withAlpha(20)),
+      curve: widget.animationCurve ?? Curves.easeOut,
+      cycles: 1,
+      duration: widget.animationDuration ?? Duration(milliseconds: 800),
+      builder: (animation) => Container(
+            margin: widget.margin,
+            decoration: () {
+              if (_getDateFromDayIndex(dayIndex) == startDate &&
+                  _getDateFromDayIndex(dayIndex) == endDate) {
+                return widget.startDateDecoration ?? _startEndDecoration;
+              }
+              if (_getDateFromDayIndex(dayIndex) == startDate) {
+                return widget.startDateDecoration ?? _defaultStartDecoration;
+              }
+              if (_getDateFromDayIndex(dayIndex) == endDate) {
+                return widget.endDateDecoration ?? _defaultEndDecoration;
+              }
+              if (isSameDay(startDate, _getDateFromDayIndex(dayIndex)) ||
+                  isSameDay(endDate, _getDateFromDayIndex(dayIndex)))
+                return widget.startDateDecoration ?? _startEndDecoration;
+              if (_isInSelectedRange(dayIndex)) {
+                return BoxDecoration(color: animation.value);
+              }
+            }(),
+            child: Container(
+              padding: widget.padding,
+              decoration: () {
+                bool isInCurrentMonth = !_isDayIndexOutOfMonth(dayIndex);
+                if (!isInCurrentMonth) {
+                  return widget.outOfMonthDateDecoration;
+                }
+                if (widget.highlightCurrentDate &&
+                    isSameDay(
+                      widget.currentDateTime ?? DateTime.now(),
+                      DateTime(
+                        _viewDate.year,
+                        _viewDate.month,
+                        dayIndex - _dayOffset,
+                      ),
+                    )) {
+                  return widget.currentDateDecoration ??
+                      ShapeDecoration(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5),
+                          side: BorderSide(
+                            color: Theme.of(context).accentColor,
+                            width: 1,
+                          ),
+                        ),
+                      );
+                }
+              }(),
+              child: _getDayTextWidget(dayIndex),
+            ),
+          ),
+    );
+  }
+
+  ShapeDecoration get _startEndDecoration => ShapeDecoration(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8.0)),
+        ),
+        color: Theme.of(context).primaryColor.withAlpha(40),
+      );
+
+  ShapeDecoration get _defaultStartDecoration => ShapeDecoration(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(left: Radius.circular(8)),
+        ),
+        color: Theme.of(context).primaryColor.withAlpha(40),
+      );
+
+  ShapeDecoration get _defaultEndDecoration => ShapeDecoration(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(right: Radius.circular(8)),
+        ),
+        color: Theme.of(context).primaryColor.withAlpha(40),
+      );
 
   void _onDateSelected(int dayIndex) {
     DateTime selectionDate = _getDateFromDayIndex(dayIndex);
@@ -490,3 +494,11 @@ class RangeCalendarState extends State<RangeCalendar> {
 }
 
 enum SelectionType { START_DATE, END_DATE }
+
+class _CalendarStateBuilder extends StatesRebuilder {
+  void rebuild() {
+    rebuildStates(["$_CALENDAR_WIDGET_TAG"]);
+  }
+}
+
+const String _CALENDAR_WIDGET_TAG = 'CAL_WIDGET';

@@ -37,7 +37,8 @@ class _HomePageState extends State<HomePage> {
           key: _calendarKey,
           currentDateTime: DateTime.now(),
           showMonthControls: true,
-          highlightCurrentDate: false,
+          highlightCurrentDate: true,
+          margin: EdgeInsets.symmetric(vertical: 5),
         ),
       ),
       floatingActionButton: FloatingActionButton(
