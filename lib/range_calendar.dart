@@ -80,8 +80,8 @@ class RangeCalendarState extends State<RangeCalendar> {
     super.initState();
 
     _viewDate = widget.currentDateTime ?? DateTime.now();
-    startDate = widget.selectionStartDate ?? DateTime.now();
-    endDate = widget.selectionEndDate ?? DateTime.now();
+    startDate = widget.selectionStartDate;
+    endDate = widget.selectionEndDate;
 
     if (startDate != null || endDate != null)
       assert(startDate.isBefore(endDate) || isSameDay(startDate, endDate));
@@ -102,6 +102,17 @@ class RangeCalendarState extends State<RangeCalendar> {
         ),
       ),
     );
+  }
+
+  SelectionType toggleCurrentDateSelection() {
+    if (startDate == null && endDate == null) {
+      selectionType = SelectionType.START_DATE;
+      return selectionType;
+    }
+    setState(() {
+      selectionType = selectionType == SelectionType.START_DATE? SelectionType.END_DATE: SelectionType.START_DATE;
+    });
+    return selectionType;
   }
 
   void nextMonth() {
@@ -309,10 +320,10 @@ class RangeCalendarState extends State<RangeCalendar> {
 
   void _onDateSelected(int dayIndex) {
     DateTime selectionDate = _getDateFromDayIndex(dayIndex);
-    if (selectionType == SelectionType.START_DATE &&
+    if (selectionType == SelectionType.START_DATE && endDate != null &&
         selectionDate.isAfter(endDate)) return;
 
-    if (selectionType == SelectionType.END_DATE &&
+    if (selectionType == SelectionType.END_DATE && startDate != null &&
         selectionDate.isBefore(startDate)) return;
     setState(() {
       if (selectionType == SelectionType.START_DATE)
@@ -477,6 +488,8 @@ class RangeCalendarState extends State<RangeCalendar> {
 
   @visibleForTesting
   static bool isSameDay(DateTime d1, DateTime d2) {
+    if (d1 == null) return false;
+    if (d2 == null) return false;
     return (d1.year == d2.year && d1.month == d2.month && d1.day == d2.day);
   }
 

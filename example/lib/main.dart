@@ -57,17 +57,15 @@ class _HomePageState extends State<HomePage>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          if (_calendarKey.currentState.selectionType ==
+          if (_calendarKey.currentState.toggleCurrentDateSelection() ==
               SelectionType.START_DATE) {
             controller.forward(from: 0);
-            _calendarKey.currentState.selectionType = SelectionType.END_DATE;
           } else {
-            _calendarKey.currentState.selectionType = SelectionType.START_DATE;
             controller.reverse(from: 1);
           }
         },
         child: AnimatedIcon(
-          icon: AnimatedIcons.ellipsis_search,
+          icon: AnimatedIcons.search_ellipsis,
           progress: controller.view,
         ),
       ),
